@@ -66,10 +66,8 @@ def resolve_target(target: str, family_hint: str = "auto") -> tuple[str, int]:
 # --------------------------------------------------------------------------
 
 if sys.platform == "win32":
-    import ctypes.wintypes as wintypes
-
-    _iphlpapi = ctypes.windll.iphlpapi
-    _ws2_32 = ctypes.windll.ws2_32
+    _iphlpapi = ctypes.WinDLL("iphlpapi", use_last_error=True)
+    _ws2_32 = ctypes.WinDLL("ws2_32", use_last_error=True)
 
     IP_SUCCESS = 0
     IP_DEST_NET_UNREACHABLE = 11002
@@ -124,6 +122,45 @@ if sys.platform == "win32":
             ("RoundTripTime", ctypes.c_uint),
         ]
 
+    # Explicit prototypes: without these, 64-bit HANDLEs returned by
+    # IcmpCreateFile would be truncated to 32-bit ints by ctypes defaults.
+    _iphlpapi.IcmpCreateFile.restype = ctypes.c_void_p
+    _iphlpapi.IcmpCreateFile.argtypes = []
+    _iphlpapi.Icmp6CreateFile.restype = ctypes.c_void_p
+    _iphlpapi.Icmp6CreateFile.argtypes = []
+    _iphlpapi.IcmpCloseHandle.restype = ctypes.c_int
+    _iphlpapi.IcmpCloseHandle.argtypes = [ctypes.c_void_p]
+    _iphlpapi.IcmpSendEcho.restype = ctypes.c_ulong
+    _iphlpapi.IcmpSendEcho.argtypes = [
+        ctypes.c_void_p,                        # IcmpHandle
+        ctypes.c_ulong,                         # DestinationAddress (IPAddr)
+        ctypes.c_char_p,                        # RequestData
+        ctypes.c_ushort,                        # RequestSize
+        ctypes.POINTER(IP_OPTION_INFORMATION),  # RequestOptions
+        ctypes.c_void_p,                        # ReplyBuffer
+        ctypes.c_ulong,                         # ReplySize
+        ctypes.c_ulong,                         # Timeout
+    ]
+    _iphlpapi.Icmp6SendEcho2.restype = ctypes.c_ulong
+    _iphlpapi.Icmp6SendEcho2.argtypes = [
+        ctypes.c_void_p,                        # IcmpHandle
+        ctypes.c_void_p,                        # Event
+        ctypes.c_void_p,                        # ApcRoutine
+        ctypes.c_void_p,                        # ApcContext
+        ctypes.POINTER(SOCKADDR_IN6),           # SourceAddress
+        ctypes.POINTER(SOCKADDR_IN6),           # DestinationAddress
+        ctypes.c_char_p,                        # RequestData
+        ctypes.c_ushort,                        # RequestSize
+        ctypes.POINTER(IP_OPTION_INFORMATION),  # RequestOptions
+        ctypes.c_void_p,                        # ReplyBuffer
+        ctypes.c_ulong,                         # ReplySize
+        ctypes.c_ulong,                         # Timeout
+    ]
+    _ws2_32.inet_addr.restype = ctypes.c_ulong
+    _ws2_32.inet_addr.argtypes = [ctypes.c_char_p]
+
+    _INVALID_HANDLE = ctypes.c_void_p(-1).value
+
     def _status_to_result(status: int) -> ProbeStatus:
         if status == IP_SUCCESS:
             return ProbeStatus.REPLY
@@ -141,7 +178,7 @@ if sys.platform == "win32":
 
     def _probe_v4(dest_ip: str, ttl: int, timeout_ms: int, size: int) -> ProbeResult:
         handle = _iphlpapi.IcmpCreateFile()
-        if handle == ctypes.c_void_p(-1).value:
+        if handle in (None, _INVALID_HANDLE):
             return ProbeResult(ProbeStatus.ERROR, detail="IcmpCreateFile failed")
         try:
             payload = (b"AdvancedMTR!" * (size // 12 + 1))[:size]
@@ -165,7 +202,7 @@ if sys.platform == "win32":
                 reply_buf, ctypes.POINTER(ICMP_ECHO_REPLY)
             ).contents
             if count == 0:
-                err = ctypes.GetLastError()
+                err = ctypes.get_last_error()
                 if err == IP_REQ_TIMED_OUT:
                     return ProbeResult(ProbeStatus.TIMEOUT)
                 # For TTL-expired and unreachable, IcmpSendEcho still fills
@@ -193,7 +230,7 @@ if sys.platform == "win32":
 
     def _probe_v6(dest_ip: str, ttl: int, timeout_ms: int, size: int) -> ProbeResult:
         handle = _iphlpapi.Icmp6CreateFile()
-        if handle == ctypes.c_void_p(-1).value:
+        if handle in (None, _INVALID_HANDLE):
             return ProbeResult(ProbeStatus.ERROR, detail="Icmp6CreateFile failed")
         try:
             payload = (b"AdvancedMTR!" * (size // 12 + 1))[:size]
