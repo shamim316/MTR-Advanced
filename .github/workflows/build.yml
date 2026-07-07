@@ -11,8 +11,8 @@ jobs:
     name: Unit tests (Linux)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install test dependencies
@@ -25,8 +25,8 @@ jobs:
     runs-on: windows-latest
     needs: test
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install dependencies
@@ -54,12 +54,12 @@ jobs:
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\AdvancedMTR.iss
           Get-ChildItem dist/installer
       - name: Upload standalone EXE
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: AdvancedMTR-portable-exe
           path: dist/AdvancedMTR.exe
       - name: Upload installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: AdvancedMTR-installer
           path: dist/installer/AdvancedMTR-Setup-*.exe
@@ -72,11 +72,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: AdvancedMTR-installer
           path: dist
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: AdvancedMTR-portable-exe
           path: dist
