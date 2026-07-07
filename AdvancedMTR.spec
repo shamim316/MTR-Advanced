@@ -6,7 +6,7 @@ import os
 block_cipher = None
 
 a = Analysis(
-    ["mtr_advanced/main.py"],
+    ["launcher.py"],
     pathex=[os.path.abspath(".")],
     binaries=[],
     datas=[("assets/icon.ico", "assets"), ("assets/icon.png", "assets")],
