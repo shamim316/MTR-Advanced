@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mtr-advanced"
+version = "1.0.0"
+description = "Advanced MTR — mtr-style network diagnostics with a GUI for Windows 11"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+dependencies = ["PyQt6>=6.6"]
+
+[project.gui-scripts]
+advanced-mtr = "mtr_advanced.main:main"
+
+[tool.setuptools.packages.find]
+include = ["mtr_advanced*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
